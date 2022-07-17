@@ -1,4 +1,3 @@
-type input = Yojson.Safe.t [@@deriving yojson] (* FIXME *)
 type field = Yojson.Safe.t [@@deriving yojson] (* FIXME *)
 
 type bot = |
@@ -21,20 +20,6 @@ type mutation = {
 type opcode =
   | X
   [@@deriving yojson]
-
-type full = {
-  opcode: string; (* FIXME opcode tag *)
-  next: Id.t option;
-  parent: Id.t option;
-  inputs: input Assoc.t;
-  fields: field Assoc.t;
-  shadow: bool;
-  top_level: bool [@key "topLevel"];
-  comment: Id.t Def.t [@default None];
-  mutation: mutation Def.t [@default None];
-  x: int Def.t [@default None]; (** when [top_level] is true *)
-  y: int Def.t [@default None]; (** when [top_level] is true *)
-} [@@deriving yojson]
 
 type pos = {
   x: int;
@@ -59,8 +44,7 @@ let drawn_to_yojson n {name; id; pos} =
   | None -> `List [`Int n; `String name; `String id]
   | Some {x; y} -> `List [`Int n; `String name; `String id; `Int x; `Int y]
 
-type t =
-  | Full of full
+type simple =
   | Number of float
   | Positive_number of float
   | Positive_integer of int
@@ -72,8 +56,7 @@ type t =
   | Variable of drawn
   | List of drawn
 
-let of_yojson = function
-  | `Assoc _ as j -> Result.map (fun f -> Full f) (full_of_yojson j)
+let simple_of_yojson = function
   | `List [`Int 4; `String ""] -> Ok (Number 0.)
   | `List [`Int 4; `String s] -> Ok (Number (float_of_string s))
   | `List [`Int 5; `String ""] -> Ok (Positive_number 0.)
@@ -97,8 +80,7 @@ let float_to_json_string f =
   (* FIXME *)
   `String (Yojson.Safe.to_string (`Float f))
 
-let to_yojson = function
-  | Full f -> full_to_yojson f
+let simple_to_yojson = function
   | Number f -> `List [`Int 4; float_to_json_string f]
   | Positive_number f -> `List [`Int 5; float_to_json_string f]
   | Positive_integer i -> `List [`Int 6; `String (string_of_int i)]
@@ -109,3 +91,71 @@ let to_yojson = function
   | Broadcast {name; id} -> `List [`Int 11; `String name; `String id]
   | Variable d -> drawn_to_yojson 12 d
   | List d -> drawn_to_yojson 13 d
+
+type id_or_simple = [
+  | `Id of Id.t
+  | `Simple of simple
+]
+
+let id_or_simple_of_yojson = function
+  | `String s -> Ok (`Id s)
+  | j -> Result.map (fun x -> `Simple x) (simple_of_yojson j)
+
+let id_or_simple_to_yojson = function
+  | `Id s -> `String s
+  | `Simple x -> simple_to_yojson x
+
+type input =
+  | Shadow of {front: id_or_simple option; back: id_or_simple}
+  | No_shadow of id_or_simple
+
+let active = function
+  | Shadow {front = Some x; _} -> x
+  | Shadow {front = None; back} -> back
+  | No_shadow x -> x
+
+let input_of_yojson = function
+  | `List [`Int 1; j] ->
+    Result.map (fun back -> Shadow {front = None; back}) (id_or_simple_of_yojson j)
+  | `List [`Int 2; j] ->
+    Result.map (fun x -> No_shadow x) (id_or_simple_of_yojson j)
+  | `List [`Int 3; f; b] ->
+    Result.bind (id_or_simple_of_yojson f) (fun f ->
+      Result.map (fun back -> Shadow {front = Some f; back}) (id_or_simple_of_yojson b)
+    )
+  | _ -> Error "Block.input_of_yojson"
+
+let input_to_yojson = function
+  | Shadow {front = None; back} ->
+    `List [`Int 1; id_or_simple_to_yojson back]
+  | No_shadow x ->
+    `List [`Int 2; id_or_simple_to_yojson x]
+  | Shadow {front = Some f; back} ->
+    `List [`Int 3; id_or_simple_to_yojson f; id_or_simple_to_yojson back]
+
+type full = {
+  opcode: string; (* FIXME opcode tag *)
+  next: Id.t option;
+  parent: Id.t option;
+  inputs: input Assoc.t;
+  fields: field Assoc.t;
+  shadow: bool;
+  top_level: bool [@key "topLevel"];
+  comment: Id.t Def.t [@default None];
+  mutation: mutation Def.t [@default None];
+  x: int Def.t [@default None]; (** when [top_level] is true *)
+  y: int Def.t [@default None]; (** when [top_level] is true *)
+} [@@deriving yojson]
+
+type t = [
+  | `Full of full
+  | `Simple of simple
+]
+
+let of_yojson = function
+  | `Assoc _ as j -> Result.map (fun x -> `Full x) (full_of_yojson j)
+  | j -> Result.map (fun x -> `Simple x) (simple_of_yojson j)
+
+let to_yojson = function
+  | `Full x -> full_to_yojson x
+  | `Simple x -> simple_to_yojson x

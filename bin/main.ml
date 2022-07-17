@@ -20,7 +20,7 @@ let () =
       in
       List.iter (fun (_, x) ->
         match x with
-        | Block.Full f -> Printf.printf "* %s\n" f.opcode
+        | `Full f -> Printf.printf "* %s\n" f.Block.opcode
         | _ -> ()
       ) basic.blocks
     ) targets
