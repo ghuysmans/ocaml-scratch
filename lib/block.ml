@@ -36,12 +36,28 @@ type full = {
   y: int Def.t [@default None]; (** when [top_level] is true *)
 } [@@deriving yojson]
 
-type drawn = {
-  name: string;
-  id: Id.t;
+type pos = {
   x: int;
   y: int;
 }
+
+type drawn = {
+  name: string;
+  id: Id.t;
+  pos: pos option;
+}
+
+let drawn_of_yojson = function
+  | `List [`Int _; `String name; `String id] ->
+    Ok {name; id; pos = None}
+  | `List [`Int _; `String name; `String id; `Int x; `Int y] ->
+    Ok {name; id; pos = Some {x; y}}
+  | _ -> Error "Block.drawn_of_yojson"
+
+let drawn_to_yojson n {name; id; pos} =
+  match pos with
+  | None -> `List [`Int n; `String name; `String id]
+  | Some {x; y} -> `List [`Int n; `String name; `String id; `Int x; `Int y]
 
 type t =
   | Full of full
@@ -68,8 +84,10 @@ let of_yojson = function
   | `List [`Int 9; `String h] -> Ok (Scanf.sscanf h "#%x" (fun x -> Color x))
   | `List [`Int 10; `String s] -> Ok (String s)
   | `List [`Int 11; `String name; `String id] -> Ok (Broadcast {name; id})
-  | `List [`Int 12; `String name; `String id; `Int x; `Int y] -> Ok (Variable {name; id; x; y})
-  | `List [`Int 13; `String name; `String id; `Int x; `Int y] -> Ok (List {name; id; x; y})
+  | `List (`Int 12 :: _) as j ->
+    Result.map (fun x -> Variable x) (drawn_of_yojson j)
+  | `List (`Int 13 :: _) as j ->
+    Result.map (fun x -> List x) (drawn_of_yojson j)
   | _ -> Error "Block.of_yojson"
 
 let to_yojson = function
@@ -82,5 +100,5 @@ let to_yojson = function
   | Color c -> `List [`Int 9; `String (Printf.sprintf "#%06x" c)]
   | String s -> `List [`Int 10; `String s]
   | Broadcast {name; id} -> `List [`Int 11; `String name; `String id]
-  | Variable {name; id; x; y} -> `List [`Int 12; `String name; `String id; `Int x; `Int y]
-  | List {name; id; x; y} -> `List [`Int 13; `String name; `String id; `Int x; `Int y]
+  | Variable d -> drawn_to_yojson 12 d
+  | List d -> drawn_to_yojson 13 d
