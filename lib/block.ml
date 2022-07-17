@@ -1,4 +1,17 @@
-type field = Yojson.Safe.t [@@deriving yojson] (* FIXME *)
+type field =
+  | One of string
+  | Two of string * Id.t option
+
+let field_of_yojson = function
+  | `List [`String s] -> Ok (One s)
+  | `List [`String s; `Null] -> Ok (Two (s, None))
+  | `List [`String s; `String i] -> Ok (Two (s, Some i))
+  | _ -> Error "Block.field_of_yojson"
+
+let field_to_yojson = function
+  | One s -> `List [`String s]
+  | Two (s, None) -> `List [`String s; `Null]
+  | Two (s, Some i) -> `List [`String s; `String i]
 
 type bot = |
 let bot_of_yojson _ =
