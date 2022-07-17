@@ -74,13 +74,16 @@ type t =
 
 let of_yojson = function
   | `Assoc _ as j -> Result.map (fun f -> Full f) (full_of_yojson j)
-  | `List [`Int 4; `Int i] -> Ok (Number (float_of_int i))
-  | `List [`Int 4; `Float f] -> Ok (Number f)
-  | `List [`Int 5; `Int i] -> Ok (Positive_number (float_of_int i))
-  | `List [`Int 6; `Int i] -> Ok (Positive_integer i)
-  | `List [`Int 7; `Int i] -> Ok (Integer i)
-  | `List [`Int 8; `Int i] -> Ok (Angle (float_of_int i))
-  | `List [`Int 8; `Float f] -> Ok (Angle f)
+  | `List [`Int 4; `String ""] -> Ok (Number 0.)
+  | `List [`Int 4; `String s] -> Ok (Number (float_of_string s))
+  | `List [`Int 5; `String ""] -> Ok (Positive_number 0.)
+  | `List [`Int 5; `String s] -> Ok (Positive_number (float_of_string s))
+  | `List [`Int 6; `String ""] -> Ok (Positive_integer 0)
+  | `List [`Int 6; `String s] -> Ok (Positive_integer (int_of_string s))
+  | `List [`Int 7; `String ""] -> Ok (Integer 0)
+  | `List [`Int 7; `String s] -> Ok (Integer (int_of_string s))
+  | `List [`Int 8; `String ""] -> Ok (Angle 0.)
+  | `List [`Int 8; `String s] -> Ok (Angle (float_of_string s))
   | `List [`Int 9; `String h] -> Ok (Scanf.sscanf h "#%x" (fun x -> Color x))
   | `List [`Int 10; `String s] -> Ok (String s)
   | `List [`Int 11; `String name; `String id] -> Ok (Broadcast {name; id})
@@ -90,13 +93,17 @@ let of_yojson = function
     Result.map (fun x -> List x) (drawn_of_yojson j)
   | _ -> Error "Block.of_yojson"
 
+let float_to_json_string f =
+  (* FIXME *)
+  `String (Yojson.Safe.to_string (`Float f))
+
 let to_yojson = function
   | Full f -> full_to_yojson f
-  | Number f -> `List [`Int 4; `Float f]
-  | Positive_number f -> `List [`Int 5; `Float f]
-  | Positive_integer i -> `List [`Int 6; `Int i]
-  | Integer i -> `List [`Int 7; `Int i]
-  | Angle f -> `List [`Int 8; `Float f]
+  | Number f -> `List [`Int 4; float_to_json_string f]
+  | Positive_number f -> `List [`Int 5; float_to_json_string f]
+  | Positive_integer i -> `List [`Int 6; `String (string_of_int i)]
+  | Integer i -> `List [`Int 7; `String (string_of_int i)]
+  | Angle f -> `List [`Int 8; float_to_json_string f]
   | Color c -> `List [`Int 9; `String (Printf.sprintf "#%06x" c)]
   | String s -> `List [`Int 10; `String s]
   | Broadcast {name; id} -> `List [`Int 11; `String name; `String id]
