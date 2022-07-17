@@ -18,9 +18,18 @@ let () =
           Printf.printf "Stage: %s\n" t.name;
           t
       in
-      List.iter (fun (_, x) ->
-        match x with
-        | `Full f -> Printf.printf "* %s\n" f.Block.opcode
-        | _ -> ()
+      List.iter (fun (id, fs) ->
+        match fs with
+        | `Full f ->
+          Printf.printf "%s %s" id f.Block.opcode;
+          begin match f.inputs with
+            | [] -> Printf.printf "\n"
+            | l ->
+              List.map (fun (k, v) -> k ^ "=" ^ Block.(active v |> to_string)) l |>
+              String.concat ", " |>
+              Printf.printf " (%s)\n"
+          end
+        | `Simple s ->
+          Printf.printf "* %s\n" (Block.simple_to_string s)
       ) basic.blocks
     ) targets

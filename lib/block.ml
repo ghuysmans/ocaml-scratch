@@ -92,6 +92,18 @@ let simple_to_yojson = function
   | Variable d -> drawn_to_yojson 12 d
   | List d -> drawn_to_yojson 13 d
 
+let simple_to_string = function
+  | Number f -> string_of_float f
+  | Positive_number f -> "+" ^ string_of_float f
+  | Positive_integer i -> "+" ^ string_of_int i
+  | Integer i -> string_of_int i
+  | Angle f -> string_of_float f ^ "°"
+  | Color x -> Printf.sprintf "#%06x" x
+  | String s -> Printf.sprintf "%S" s
+  | Broadcast {id; _} -> "B[" ^ id ^ "]"
+  | Variable {id; _} -> "V[" ^ id ^ "]"
+  | List {id; _} -> "L[" ^ id ^ "]"
+
 type id_or_simple = [
   | `Id of Id.t
   | `Simple of simple
@@ -159,3 +171,7 @@ let of_yojson = function
 let to_yojson = function
   | `Full x -> full_to_yojson x
   | `Simple x -> simple_to_yojson x
+
+let to_string = function
+  | `Id s -> s
+  | `Simple x -> simple_to_string x
