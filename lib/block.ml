@@ -22,7 +22,7 @@ type opcode =
   | X
   [@@deriving yojson]
 
-type full_block = {
+type full = {
   opcode: string; (* FIXME opcode tag *)
   next: Id.t option;
   parent: Id.t option;
@@ -36,7 +36,7 @@ type full_block = {
   y: int Def.t [@default None]; (** when [top_level] is true *)
 } [@@deriving yojson]
 
-type drawn_block = {
+type drawn = {
   name: string;
   id: Id.t;
   x: int;
@@ -44,7 +44,7 @@ type drawn_block = {
 }
 
 type t =
-  | Full of full_block
+  | Full of full
   | Number of float
   | Positive_number of float
   | Positive_integer of int
@@ -53,11 +53,11 @@ type t =
   | Color of int
   | String of string
   | Broadcast of {name: string; id: Id.t}
-  | Variable of drawn_block
-  | List of drawn_block
+  | Variable of drawn
+  | List of drawn
 
 let of_yojson = function
-  | `Assoc _ as j -> Result.map (fun f -> Full f) (full_block_of_yojson j)
+  | `Assoc _ as j -> Result.map (fun f -> Full f) (full_of_yojson j)
   | `List [`Int 4; `Int i] -> Ok (Number (float_of_int i))
   | `List [`Int 4; `Float f] -> Ok (Number f)
   | `List [`Int 5; `Int i] -> Ok (Positive_number (float_of_int i))
@@ -73,7 +73,7 @@ let of_yojson = function
   | _ -> Error "Block.of_yojson"
 
 let to_yojson = function
-  | Full f -> full_block_to_yojson f
+  | Full f -> full_to_yojson f
   | Number f -> `List [`Int 4; `Float f]
   | Positive_number f -> `List [`Int 5; `Float f]
   | Positive_integer i -> `List [`Int 6; `Int i]
