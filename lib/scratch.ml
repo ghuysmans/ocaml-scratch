@@ -211,18 +211,49 @@ type asset = {
   name: string;
   filename: string [@key "md5ext"];
   data_format: string [@key "dataFormat"];
-} [@@deriving yojson]
+} [@@deriving yojson {meta=true}]
 
-type costume = {
-  resolution: int [@default 2] [@key "bitmapResolution"];
-  cx: float [@key "rotationCenterX"];
-  cy: float [@key "rotationCenterY"];
-} [@@deriving yojson {strict=false (* FIXME asset *)}]
+module Costume = struct
+  type s = {
+    resolution: int [@default 2] [@key "bitmapResolution"];
+    cx: float [@key "rotationCenterX"];
+    cy: float [@key "rotationCenterY"];
+  } [@@deriving yojson]
 
-type sound = {
-  rate: int; (** in Hz *)
-  sample_count: int [@key "sampleCount"];
-} [@@deriving yojson {strict=false (* FIXME asset *)}]
+  type t = asset * s
+
+  let of_yojson = function
+    | `Assoc l ->
+      let a, s = List.(partition (fun (x, _) -> mem x Yojson_meta_asset.keys) l) in
+      Result.bind (asset_of_yojson (`Assoc a)) (fun a ->
+        Result.map (fun s -> a, s) (s_of_yojson (`Assoc s))
+      )
+    | _ -> Error "Costume.of_yojson"
+
+  let to_yojson (a, s) =
+    Yojson.Safe.Util.combine (asset_to_yojson a) (s_to_yojson s)
+end
+
+module Sound = struct
+  type s = {
+    rate: int; (** in Hz *)
+    sample_count: int [@key "sampleCount"];
+    format: string [@default ""];
+  } [@@deriving yojson]
+
+  type t = asset * s
+
+  let of_yojson = function
+    | `Assoc l ->
+      let a, s = List.(partition (fun (x, _) -> mem x Yojson_meta_asset.keys) l) in
+      Result.bind (asset_of_yojson (`Assoc a)) (fun a ->
+        Result.map (fun s -> a, s) (s_of_yojson (`Assoc s))
+      )
+    | _ -> Error "Sound.of_yojson"
+
+  let to_yojson (a, s) =
+    Yojson.Safe.Util.combine (asset_to_yojson a) (s_to_yojson s)
+end
 
 type target = {
   is_stage: bool [@key "isStage"];
@@ -233,8 +264,8 @@ type target = {
   blocks: block map;
   comments: comment map;
   current_costume: int [@key "currentCostume"];
-  costumes: costume list;
-  sounds: sound list;
+  costumes: Costume.t list;
+  sounds: Sound.t list;
   layer_order: int [@key "layerOrder"];
   volume: int; (** between 0 and 100 *)
 } [@@deriving yojson {strict=false (* FIXME? *)}]
