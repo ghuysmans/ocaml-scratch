@@ -1,3 +1,5 @@
+module R = Ppx_deriving_yojson_runtime
+
 type t = {
   name: string;
   value: Value.t list;
@@ -5,9 +7,7 @@ type t = {
 
 let of_yojson = function
   | `List [`String name; `List l] ->
-    List.map Value.of_yojson l |>
-    Util.sequence |>
-    Result.map (fun value -> {name; value})
+    Result.map (fun value -> {name; value}) (R.map_bind Value.of_yojson [] l)
   | _ -> Error "Lst.of_yojson"
 
 let to_yojson {name; value} =
