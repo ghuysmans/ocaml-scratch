@@ -14,6 +14,10 @@ module Costume = struct
 
   type t = asset * s
 
+  let make ?(cx=0.) ?(cy=0.) ~name ~data_format asset_id =
+    let filename = Digest.to_hex asset_id ^ "." ^ data_format in
+    {asset_id; name; filename; data_format}, {resolution = 2; cx; cy}
+
   let of_yojson = function
     | `Assoc l ->
       let a, s = List.(partition (fun (x, _) -> mem x Yojson_meta_asset.keys) l) in
