@@ -13,6 +13,21 @@ type target = {
   volume: int; (** between 0 and 100 *)
 } [@@deriving yojson {meta=true}]
 
+let empty_target = {
+  is_stage = false;
+  name = "";
+  variables = [];
+  lists = [];
+  broadcasts = [];
+  blocks = [];
+  comments = [];
+  current_costume = 0;
+  costumes = [];
+  sounds = [];
+  layer_order = 0;
+  volume = 0;
+}
+
 type video_state =
   | On [@name "on"]
   | Off [@name "off"]
@@ -25,6 +40,13 @@ type stage = {
   video_transparency: int [@key "videoTransparency"];
   tts_language: string option [@key "textToSpeechLanguage"];
 } [@@deriving yojson]
+
+let empty_stage = {
+  tempo = 60;
+  video_state = Off;
+  video_transparency = 0;
+  tts_language = None
+}
 
 type rotation_style =
   | All_around [@name "all around"]

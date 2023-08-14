@@ -19,6 +19,12 @@ type meta = {
   last_user_agent: string [@key "agent"];
 } [@@deriving yojson]
 
+let output_meta = {
+  semver = "3.0.0";
+  creator_vm = "1.5.92";
+  last_user_agent = "ocaml-scratch";
+}
+
 type t = {
   targets: Target.t list;
   monitors: Monitor.t list;
