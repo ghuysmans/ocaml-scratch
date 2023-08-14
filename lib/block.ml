@@ -205,3 +205,29 @@ let top_level ~x ~y = function
   | (id, h) :: t ->
     (id, `Full {h with top_level = true; x = Some x; y = Some y}) ::
     List.map (fun (id, b) -> id, `Full b) t
+
+let say ?secs message =
+  let base =
+    {
+      opcode = "looks_say";
+      next = None;
+      parent = None;
+      inputs = ["MESSAGE", Shadow {front = None; back = message}];
+      fields = [];
+      shadow = false;
+      top_level = false;
+      comment = None;
+      mutation = None;
+      x = None;
+      y = None;
+    }
+  in
+  match secs with
+  | None -> base
+  | Some s ->
+    let s = "SECS", Shadow {front = None; back = `Simple (Number s)} in
+    {base with opcode = "looks_sayforsecs"; inputs = s :: base.inputs}
+
+let think ?secs message =
+  let opcode = "looks_think" ^ if secs = None then "" else "forsecs" in
+  {(say ?secs message) with opcode}
