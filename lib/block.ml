@@ -188,3 +188,20 @@ let to_yojson = function
 let to_string = function
   | `Id s -> s
   | `Simple x -> simple_to_string x
+
+let chain gen =
+  let rec f ?parent ~id acc = function
+    | [] -> []
+    | b :: (_ :: _ as t) ->
+      let next = gen () in
+      f ~parent:id ~id:next ((id, {b with parent; next = Some next}) :: acc) t
+    | [b] ->
+      List.rev ((id, {b with parent; next = None}) :: acc)
+  in
+  f ~id:(gen ()) []
+
+let top_level ~x ~y = function
+  | [] -> []
+  | (id, h) :: t ->
+    (id, `Full {h with top_level = true; x = Some x; y = Some y}) ::
+    List.map (fun (id, b) -> id, `Full b) t
